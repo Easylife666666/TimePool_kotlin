@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.timepool.data.TimeBlock
@@ -123,6 +124,25 @@ fun Sidebar(
                     StatRow("本周剩余", "${"%.1f".format(stats.totalRemaining)}h", color = Color(0xFF00FF88), modifier = Modifier.weight(1f))
                 }
                 
+                // Weekly Pool Remaining Bar (User suggestion: Full 24h*8, empties over time)
+                val totalCapacity = 8 * 24f
+                val weekPct = (stats.totalRemaining / totalCapacity).coerceIn(0f, 1f)
+                
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("全周剩余筹码", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        Text("${"%.1f".format(weekPct * 100)}%", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00FF88))
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { weekPct },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(3.dp)),
+                        color = Color(0xFF00FF88),
+                        trackColor = Color.White.copy(alpha = 0.05f),
+                        strokeCap = StrokeCap.Round
+                    )
+                }
+                
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color.White.copy(alpha = 0.05f))
                 
                 categories.forEach { cat ->
@@ -213,15 +233,27 @@ fun DayCard(
     
     var showAddDialog by remember { mutableStateOf(false) }
     
+    val used = blocks.sumOf { (it.duration - it.completedTime).toDouble().coerceAtLeast(0.0) }.toFloat()
+    
+    val now = java.time.LocalDateTime.now()
+    val passedHours = if (isToday) {
+        val logicDayStart = if (now.hour < 1) {
+            now.minusDays(1).withHour(1).withMinute(0).withSecond(0).withNano(0)
+        } else {
+            now.withHour(1).withMinute(0).withSecond(0).withNano(0)
+        }
+        val diffSeconds = java.time.Duration.between(logicDayStart, now).seconds
+        (diffSeconds / 3600f).coerceAtLeast(0f)
+    } else 0f
+    
+    val remaining = (24f - used - passedHours).coerceAtLeast(0f)
+
     if (showAddDialog) {
         AddBlockDialog(onDismiss = { showAddDialog = false }, onAdd = { name, duration, catId ->
             viewModel.addBlock(date, name, duration, catId)
             showAddDialog = false
         }, categories = categories)
     }
-
-    val used = blocks.sumOf { (it.duration - it.completedTime).toDouble().coerceAtLeast(0.0) }.toFloat()
-    val remaining = (24f - used).coerceAtLeast(0f)
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -237,7 +269,7 @@ fun DayCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(if (isToday) "今天" else date.substring(5).replace("-", "/"), style = MaterialTheme.typography.titleMedium)
-                    Text("占用: ${"%.1f".format(used)}h | 剩余: ${"%.1f".format(remaining)}h", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("规划: ${"%.1f".format(used)}h | 剩余: ${"%.1f".format(remaining)}h", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = { viewModel.applyTemplatesToDay(date) }) {
@@ -251,26 +283,18 @@ fun DayCard(
             Spacer(modifier = Modifier.height(8.dp))
             
             val usedPct = used / 24f
-            val now = java.time.LocalDateTime.now()
-            val passedHours = if (isToday) {
-                val logicDayStart = if (now.hour < 1) {
-                    now.minusDays(1).withHour(1).withMinute(0).withSecond(0).withNano(0)
-                } else {
-                    now.withHour(1).withMinute(0).withSecond(0).withNano(0)
-                }
-                val diffSeconds = java.time.Duration.between(logicDayStart, now).seconds
-                (diffSeconds / 3600f).coerceAtLeast(0f)
-            } else 0f
             val passedPct = passedHours / 24f
             
-            Box(modifier = Modifier.fillMaxWidth().height(8.dp).background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(4.dp))) {
-                if (passedPct > 0) {
-                    Box(modifier = Modifier.fillMaxWidth(passedPct.coerceAtMost(1f)).fillMaxHeight().background(Color.White.copy(alpha = 0.1f)))
-                }
-                if (usedPct > 0) {
-                    Box(modifier = Modifier.fillMaxWidth(usedPct.coerceAtMost(1f)).fillMaxHeight().background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)))
-                }
-            }
+            LinearProgressIndicator(
+                progress = { remaining / 24f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp)),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color.White.copy(alpha = 0.05f),
+                strokeCap = StrokeCap.Round
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             
