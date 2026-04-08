@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.example.timepool"
     compileSdk = 35
-
+    
     defaultConfig {
         applicationId = "com.example.timepool"
         minSdk = 35
@@ -33,6 +33,13 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.core:core:1.15.0")
+            force("androidx.core:core-ktx:1.15.0")
+        }
     }
 }
 

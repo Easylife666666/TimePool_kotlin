@@ -1,10 +1,14 @@
 package com.example.timepool.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -141,7 +145,7 @@ fun DayCard(
             Text(if (isToday) "今天" else date.substring(5).replace("-", "/"), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { viewModel.applyTemplatesToDay(date) }) {
-                Icon(Icons.Default.Bolt, contentDescription = "Apply Template", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.FlashOn, contentDescription = "Apply Template", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Block")

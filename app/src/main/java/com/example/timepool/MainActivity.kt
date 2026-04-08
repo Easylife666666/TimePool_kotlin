@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LayoutGrid
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
@@ -89,6 +89,6 @@ enum class AppDestinations(
     val route: String
 ) {
     DASHBOARD("时间池", Icons.Default.Home, "dashboard"),
-    TEMPLATES("预置模板", Icons.Default.LayoutGrid, "templates"),
-    CATEGORIES("分类管理", Icons.Default.Tag, "categories"),
+    TEMPLATES("预置模板", Icons.Default.GridView, "templates"),
+    CATEGORIES("分类管理", Icons.Default.LocalOffer, "categories"),
 }
