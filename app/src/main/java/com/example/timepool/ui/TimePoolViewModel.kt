@@ -42,27 +42,33 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
             weekRange.collectLatest { range ->
                 if (range.isEmpty()) return@collectLatest
                 repository.getBlocksForDates(range).collect { blocks ->
-                    val grouped = blocks.groupBy { it.date }
-                    _dailyBlocks.value = grouped
-                    
-                    // Auto-populate missing days with guard
-                    range.forEach { date ->
-                        if ((!grouped.containsKey(date) || grouped[date]!!.isEmpty()) && !populatingDates.contains(date)) {
-                            populateDayWithTemplates(date)
-                        }
-                    }
+                    _dailyBlocks.value = blocks.groupBy { it.date }
+                    // Auto-populate logic REMOVED to respect manual deletions
                 }
             }
         }
     }
 
     private fun populateDayWithTemplates(date: String) {
-        if (populatingDates.contains(date)) return
-        populatingDates.add(date)
-        
+        // We use a simpler guard for manual triggers or ensure it doesn't get stuck
         viewModelScope.launch {
+            if (populatingDates.contains(date)) return@launch
+            populatingDates.add(date)
             try {
-                val templates = allTemplates.value
+                // Ensure we have templates loaded
+                var templates = allTemplates.value
+                if (templates.isEmpty()) {
+                    // Quick wait for flow emission if it's currently empty
+                    kotlinx.coroutines.withTimeoutOrNull(1000) {
+                        repository.allTemplates.collect { 
+                            if (it.isNotEmpty()) {
+                                templates = it
+                                throw kotlinx.coroutines.CancellationException() // break collect
+                            }
+                        }
+                    }
+                }
+                
                 if (templates.isNotEmpty()) {
                     val blocks = templates.map { tpl ->
                         TimeBlock(
@@ -71,14 +77,13 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
                             categoryId = tpl.categoryId,
                             date = date,
                             priority = tpl.priority,
-                            note = "自动预置"
+                            note = "来自模板"
                         )
                     }
                     repository.insertBlocks(blocks)
                 }
             } finally {
-                // Delay a bit to allow DB emission to catch up
-                kotlinx.coroutines.delay(500)
+                kotlinx.coroutines.delay(300)
                 populatingDates.remove(date)
             }
         }
