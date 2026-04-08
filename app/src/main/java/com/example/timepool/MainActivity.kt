@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
@@ -67,7 +68,7 @@ fun TimePoolApp(viewModel: TimePoolViewModel) {
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             NavHost(navController = navController, startDestination = AppDestinations.DASHBOARD.route) {
                 composable(AppDestinations.DASHBOARD.route) { 
                     DashboardScreen(viewModel) 

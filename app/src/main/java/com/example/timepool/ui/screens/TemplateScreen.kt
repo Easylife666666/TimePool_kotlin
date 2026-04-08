@@ -54,10 +54,21 @@ fun TemplateScreen(viewModel: TimePoolViewModel) {
                                         label = { Text("时长 (h)") },
                                         modifier = Modifier.weight(1f)
                                     )
-                                    // Simplified Category Selector
-                                    Box(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
-                                        val category = categories.find { it.id == tpl.categoryId }
-                                        Text(category?.name ?: "选择分类", style = MaterialTheme.typography.bodyLarge)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    categories.forEach { cat ->
+                                        FilterChip(
+                                            selected = tpl.categoryId == cat.id,
+                                            onClick = { viewModel.updateTemplate(tpl.copy(categoryId = cat.id)) },
+                                            label = { Text(cat.name, style = MaterialTheme.typography.labelSmall) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = Color(android.graphics.Color.parseColor(cat.color)).copy(alpha = 0.3f),
+                                                selectedLabelColor = Color.White
+                                            )
+                                        )
                                     }
                                 }
                             }

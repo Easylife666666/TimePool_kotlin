@@ -31,76 +31,106 @@ fun DashboardScreen(viewModel: TimePoolViewModel) {
 
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        // Stats Sidebar
-        Column(
-            modifier = Modifier
-                .width(280.dp)
-                .fillMaxHeight()
-                .padding(16.dp)
-        ) {
-            Text("星期概览", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(16.dp))
-            GlassCard {
-                StatRow("规划总量", "${"%.1f".format(weeklyStats.totalUsed)}h")
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.05f))
-                StatRow("本周剩余", "${"%.1f".format(weeklyStats.totalRemaining)}h", color = Color(0xFF00FF88))
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isWideScreen = maxWidth > 600.dp
+        
+        if (isWideScreen) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                Sidebar(weeklyStats, selectedIds, onCancel = { selectedIds = emptySet() }, onDelete = { 
+                    viewModel.deleteBlocks(selectedIds.toList())
+                    selectedIds = emptySet()
+                })
+                MainGrid(weekRange, dailyBlocks, categories, selectedIds, { id -> 
+                    selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+                }, { ids ->
+                    selectedIds = if (selectedIds.containsAll(ids)) selectedIds - ids else selectedIds + ids
+                }, viewModel, Modifier.weight(1f))
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            if (selectedIds.isNotEmpty()) {
-                GlassCard(modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))) {
-                    Text("已选中 ${selectedIds.size} 项", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { selectedIds = emptySet() },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f))
-                        ) {
-                            Text("取消", fontSize = MaterialTheme.typography.bodySmall.fontSize)
-                        }
-                        Button(
-                            onClick = { 
-                                viewModel.deleteBlocks(selectedIds.toList())
-                                selectedIds = emptySet()
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.6f))
-                        ) {
-                            Text("删除", fontSize = MaterialTheme.typography.bodySmall.fontSize)
-                        }
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Sidebar(weeklyStats, selectedIds, onCancel = { selectedIds = emptySet() }, onDelete = { 
+                    viewModel.deleteBlocks(selectedIds.toList())
+                    selectedIds = emptySet()
+                }, modifier = Modifier.fillMaxWidth())
+                MainGrid(weekRange, dailyBlocks, categories, selectedIds, { id -> 
+                    selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+                }, { ids ->
+                    selectedIds = if (selectedIds.containsAll(ids)) selectedIds - ids else selectedIds + ids
+                }, viewModel, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+fun Sidebar(
+    stats: com.example.timepool.ui.WeeklyStats, 
+    selectedIds: Set<String>, 
+    onCancel: () -> Unit, 
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .then(if (modifier == Modifier) Modifier.width(280.dp) else Modifier)
+            .padding(16.dp)
+    ) {
+        Text("星期概览", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        GlassCard {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                StatRow("规划总量", "${"%.1f".format(stats.totalUsed)}h", modifier = Modifier.weight(1f))
+                StatRow("本周剩余", "${"%.1f".format(stats.totalRemaining)}h", color = Color(0xFF00FF88), modifier = Modifier.weight(1f))
+            }
+        }
+        
+        if (selectedIds.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassCard(modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))) {
+                Text("已选中 ${selectedIds.size} 项", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onCancel, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f))) {
+                        Text("取消", fontSize = MaterialTheme.typography.bodySmall.fontSize)
+                    }
+                    Button(onClick = onDelete, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.6f))) {
+                        Text("删除", fontSize = MaterialTheme.typography.bodySmall.fontSize)
                     }
                 }
             }
         }
+    }
+}
 
-        // Days Grid
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 300.dp),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(weekRange) { date ->
-                val dayBlocks = dailyBlocks[date] ?: emptyList()
-                DayCard(
-                    date = date,
-                    blocks = dayBlocks,
-                    categories = categories,
-                    selectedIds = selectedIds,
-                    onToggleSelect = { id ->
-                        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
-                    },
-                    onSelectAll = {
-                        val ids = dayBlocks.map { it.id }.toSet()
-                        selectedIds = if (selectedIds.containsAll(ids)) selectedIds - ids else selectedIds + ids
-                    },
-                    viewModel = viewModel
-                )
-            }
+@Composable
+fun MainGrid(
+    weekRange: List<String>, 
+    dailyBlocks: Map<String, List<TimeBlock>>, 
+    categories: List<com.example.timepool.data.Category>,
+    selectedIds: Set<String>,
+    onToggleSelect: (String) -> Unit,
+    onSelectAll: (Set<String>) -> Unit,
+    viewModel: TimePoolViewModel,
+    modifier: Modifier = Modifier
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 300.dp),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier
+    ) {
+        items(weekRange) { date ->
+            val dayBlocks = dailyBlocks[date] ?: emptyList()
+            DayCard(
+                date = date,
+                blocks = dayBlocks,
+                categories = categories,
+                selectedIds = selectedIds,
+                onToggleSelect = onToggleSelect,
+                onSelectAll = { onSelectAll(dayBlocks.map { it.id }.toSet()) },
+                viewModel = viewModel
+            )
         }
     }
 }
@@ -262,8 +292,8 @@ fun AddBlockDialog(
 }
 
 @Composable
-fun StatRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.primary) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+fun StatRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.primary, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Text(value, style = MaterialTheme.typography.bodySmall, color = color)
     }
