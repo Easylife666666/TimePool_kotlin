@@ -24,7 +24,7 @@ fun CategoryScreen(viewModel: TimePoolViewModel) {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.addCategory("新分类", "#FFFFFF") }) {
+            FloatingActionButton(onClick = { viewModel.addCategory("新分类", "#7E5BEF") }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Category")
             }
         },
@@ -38,14 +38,31 @@ fun CategoryScreen(viewModel: TimePoolViewModel) {
                 items(categories) { cat ->
                     GlassCard {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier.size(24.dp).background(Color(android.graphics.Color.parseColor(cat.color)), CircleShape))
+                            // Color Preview
+                            val parsedColor = remember(cat.color) { 
+                                try { Color(android.graphics.Color.parseColor(cat.color)) } catch (e: Exception) { Color.Gray } 
+                            }
+                            Box(modifier = Modifier.size(32.dp).background(parsedColor, CircleShape))
+                            
                             Spacer(modifier = Modifier.width(16.dp))
-                            OutlinedTextField(
-                                value = cat.name,
-                                onValueChange = { viewModel.updateCategory(cat.copy(name = it)) },
-                                label = { Text("名称") },
-                                modifier = Modifier.weight(1f)
-                            )
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = cat.name,
+                                    onValueChange = { viewModel.updateCategory(cat.copy(name = it)) },
+                                    label = { Text("名称") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = cat.color,
+                                    onValueChange = { viewModel.updateCategory(cat.copy(color = it)) },
+                                    label = { Text("颜色 (HEX)") },
+                                    placeholder = { Text("#RRGGBB") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            
                             IconButton(onClick = { viewModel.deleteCategory(cat) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.6f))
                             }
