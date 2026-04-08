@@ -35,6 +35,8 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
         _weekRange.value = range
     }
 
+    private val populatingDates = mutableSetOf<String>()
+
     private fun observeBlocks() {
         viewModelScope.launch {
             weekRange.collectLatest { range ->
@@ -43,9 +45,9 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
                     val grouped = blocks.groupBy { it.date }
                     _dailyBlocks.value = grouped
                     
-                    // Auto-populate missing days
+                    // Auto-populate missing days with guard
                     range.forEach { date ->
-                        if (!grouped.containsKey(date) || grouped[date]!!.isEmpty()) {
+                        if ((!grouped.containsKey(date) || grouped[date]!!.isEmpty()) && !populatingDates.contains(date)) {
                             populateDayWithTemplates(date)
                         }
                     }
@@ -55,20 +57,29 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
     }
 
     private fun populateDayWithTemplates(date: String) {
+        if (populatingDates.contains(date)) return
+        populatingDates.add(date)
+        
         viewModelScope.launch {
-            val templates = allTemplates.value
-            if (templates.isNotEmpty()) {
-                val blocks = templates.map { tpl ->
-                    TimeBlock(
-                        name = tpl.name,
-                        duration = tpl.duration,
-                        categoryId = tpl.categoryId,
-                        date = date,
-                        priority = tpl.priority,
-                        note = "自动预置"
-                    )
+            try {
+                val templates = allTemplates.value
+                if (templates.isNotEmpty()) {
+                    val blocks = templates.map { tpl ->
+                        TimeBlock(
+                            name = tpl.name,
+                            duration = tpl.duration,
+                            categoryId = tpl.categoryId,
+                            date = date,
+                            priority = tpl.priority,
+                            note = "自动预置"
+                        )
+                    }
+                    repository.insertBlocks(blocks)
                 }
-                repository.insertBlocks(blocks)
+            } finally {
+                // Delay a bit to allow DB emission to catch up
+                kotlinx.coroutines.delay(500)
+                populatingDates.remove(date)
             }
         }
     }
@@ -80,7 +91,8 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
         var totalPassed = 0f
         var totalRemaining = 0f
 
-        val todayStr = LocalDate.now().format(dateFormatter)
+        // The first day in range is always our "Logic Today"
+        val todayStr = range.firstOrNull() ?: ""
         
         range.forEach { date ->
             val dayBlocks = blocks[date] ?: emptyList()
@@ -100,11 +112,16 @@ class TimePoolViewModel(private val repository: TimePoolRepository) : ViewModel(
         WeeklyStats(totalUsed, totalPassed, totalRemaining, stats)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WeeklyStats())
 
+    // Updated stats logic using Time Pool's definition of "Today"
     private fun getPassedHours(): Float {
         val now = LocalDateTime.now()
-        if (now.hour < 1) return 0f
-        val startOfToday = now.withHour(1).withMinute(0).withSecond(0).withNano(0)
-        val diffSeconds = java.time.Duration.between(startOfToday, now).seconds
+        // If it's before 1 AM, the "Logic Day" started at 1 AM yesterday
+        val logicDayStart = if (now.hour < 1) {
+            now.minusDays(1).withHour(1).withMinute(0).withSecond(0).withNano(0)
+        } else {
+            now.withHour(1).withMinute(0).withSecond(0).withNano(0)
+        }
+        val diffSeconds = java.time.Duration.between(logicDayStart, now).seconds
         return (diffSeconds / 3600f).coerceAtLeast(0f)
     }
 

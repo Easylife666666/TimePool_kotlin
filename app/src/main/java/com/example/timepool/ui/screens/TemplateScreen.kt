@@ -60,12 +60,13 @@ fun TemplateScreen(viewModel: TimePoolViewModel) {
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     categories.forEach { cat ->
+                                        val safeColor = try { Color(android.graphics.Color.parseColor(cat.color)) } catch (e: Exception) { Color.Gray }
                                         FilterChip(
                                             selected = tpl.categoryId == cat.id,
                                             onClick = { viewModel.updateTemplate(tpl.copy(categoryId = cat.id)) },
                                             label = { Text(cat.name, style = MaterialTheme.typography.labelSmall) },
                                             colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = Color(android.graphics.Color.parseColor(cat.color)).copy(alpha = 0.3f),
+                                                selectedContainerColor = safeColor.copy(alpha = 0.3f),
                                                 selectedLabelColor = Color.White
                                             )
                                         )

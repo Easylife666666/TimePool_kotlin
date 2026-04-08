@@ -131,14 +131,14 @@ fun Sidebar(
                     if (hours > 0) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(cat.name, style = MaterialTheme.typography.labelSmall, color = Color(android.graphics.Color.parseColor(cat.color)))
+                                Text(cat.name, style = MaterialTheme.typography.labelSmall, color = parseHexColor(cat.color))
                                 Text("${"%.1f".format(hours)}h", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             LinearProgressIndicator(
                                 progress = { pct },
                                 modifier = Modifier.fillMaxWidth().height(2.dp),
-                                color = Color(android.graphics.Color.parseColor(cat.color)),
+                                color = parseHexColor(cat.color),
                                 trackColor = Color.White.copy(alpha = 0.05f)
                             )
                         }
@@ -208,7 +208,7 @@ fun DayCard(
     onSelectAll: () -> Unit,
     viewModel: TimePoolViewModel
 ) {
-    val isToday = date == LocalDate.now().toString()
+    val isToday = date == viewModel.weekRange.value.firstOrNull()
     val isAllSelected = blocks.isNotEmpty() && blocks.all { selectedIds.contains(it.id) }
     
     var showAddDialog by remember { mutableStateOf(false) }
@@ -253,12 +253,13 @@ fun DayCard(
             val usedPct = used / 24f
             val now = java.time.LocalDateTime.now()
             val passedHours = if (isToday) {
-                if (now.hour < 1) 0f
-                else {
-                    val startOfToday = now.withHour(1).withMinute(0).withSecond(0).withNano(0)
-                    val diffSeconds = java.time.Duration.between(startOfToday, now).seconds
-                    (diffSeconds / 3600f).coerceAtLeast(0f)
+                val logicDayStart = if (now.hour < 1) {
+                    now.minusDays(1).withHour(1).withMinute(0).withSecond(0).withNano(0)
+                } else {
+                    now.withHour(1).withMinute(0).withSecond(0).withNano(0)
                 }
+                val diffSeconds = java.time.Duration.between(logicDayStart, now).seconds
+                (diffSeconds / 3600f).coerceAtLeast(0f)
             } else 0f
             val passedPct = passedHours / 24f
             
@@ -288,6 +289,15 @@ fun DayCard(
     }
 }
 
+fun parseHexColor(hex: String?): Color {
+    if (hex == null) return Color.Gray
+    return try {
+        Color(android.graphics.Color.parseColor(hex))
+    } catch (e: Exception) {
+        Color.Gray
+    }
+}
+
 @Composable
 fun BlockItem(
     block: TimeBlock, 
@@ -311,7 +321,7 @@ fun BlockItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(12.dp).background(
-            Color(android.graphics.Color.parseColor(category?.color ?: "#FFFFFF")), 
+            parseHexColor(category?.color), 
             shape = RoundedCornerShape(2.dp)
         ))
         Spacer(modifier = Modifier.width(8.dp))
@@ -382,7 +392,7 @@ fun AddBlockDialog(onDismiss: () -> Unit, onAdd: (String, Float, String) -> Unit
                             selected = selectedCategoryId == cat.id,
                             onClick = { selectedCategoryId = cat.id },
                             label = { Text(cat.name, fontSize = 10.sp) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(android.graphics.Color.parseColor(cat.color)).copy(alpha = 0.3f), selectedLabelColor = Color.White)
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = parseHexColor(cat.color).copy(alpha = 0.3f), selectedLabelColor = Color.White)
                         )
                     }
                 }

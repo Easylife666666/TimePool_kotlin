@@ -24,6 +24,7 @@ abstract class TimePoolDatabase : RoomDatabase() {
                     "time_pool_database"
                 )
                 .addCallback(TimePoolDatabaseCallback(scope))
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
