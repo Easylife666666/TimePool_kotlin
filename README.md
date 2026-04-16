@@ -1,4 +1,4 @@
-Vibe coding by antigravity with gemini-3-flash.
+Vibe coding by antigravity with gemini-3-flash. Bug maybe exists.
 
 # TimePool
 
