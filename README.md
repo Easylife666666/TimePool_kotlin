@@ -2,7 +2,7 @@ Vibe coding by antigravity with gemini-3-flash.
 
 # TimePool
 
-An Android time management app built with Kotlin.
+An Android time management app built with Kotlin. Requires Android 15+.
 
 ## Tech Stack
 
